@@ -1,0 +1,140 @@
+#include <iostream> 
+#include <vector> 
+#include <algorithm> 
+#include <queue> 
+#include <limits> 
+using namespace std; 
+const int INF = numeric_limits<int>::max() / 2; 
+struct Node { 
+ int level; 
+ int costSoFar; // actual path cost accumulated 
+ int lowerBound; // costSoFar + reduced cost 
+ vector<int> path; 
+ vector<vector<int>> reducedMatrix; 
+ bool operator>(const Node& other) const { 
+ return lowerBound > other.lowerBound; 
+ } 
+}; 
+int reduceMatrix(vector<vector<int>>& matrix) { 
+ int N = matrix.size(); 
+ int reductionCost = 0; 
+ for (int i = 0; i < N; ++i) { 
+ int rowMin = INF; 
+ for (int j = 0; j < N; ++j) 
+ rowMin = min(rowMin, matrix[i][j]); 
+ if (rowMin != 0 && rowMin != INF) { 
+ reductionCost += rowMin; 
+ for (int j = 0; j < N; ++j)
+ if (matrix[i][j] != INF) 
+ matrix[i][j] -= rowMin; 
+ } 
+ } 
+ for (int j = 0; j < N; ++j) { 
+ int colMin = INF; 
+ for (int i = 0; i < N; ++i) 
+ colMin = min(colMin, matrix[i][j]); 
+ if (colMin != 0 && colMin != INF) { 
+ reductionCost += colMin; 
+ for (int i = 0; i < N; ++i) 
+ if (matrix[i][j] != INF) 
+ matrix[i][j] -= colMin; 
+ } 
+ } 
+ return reductionCost; 
+} 
+pair<int, vector<int>> TSP_BranchAndBound(const vector<vector<int>>& originalMatrix, int startCity = 0) {  int N = originalMatrix.size(); 
+ vector<vector<int>> rootMatrix = originalMatrix; 
+ for (int i = 0; i < N; ++i) 
+ rootMatrix[i][i] = INF; 
+ int initialReduction = reduceMatrix(rootMatrix); 
+ Node root = {0, 0, initialReduction, {startCity}, rootMatrix}; 
+ int bestCost = INF; 
+ vector<int> bestPath; 
+ priority_queue<Node, vector<Node>, greater<Node>> PQ; 
+ PQ.push(root); 
+ while (!PQ.empty()) { 
+ Node node = PQ.top(); 
+ PQ.pop(); 
+ if (node.lowerBound >= bestCost) continue; 
+ if (node.level == N - 1) {
+ int lastCity = node.path.back(); 
+ int costToReturn = originalMatrix[lastCity][startCity];  if (costToReturn != INF) { 
+ int totalCost = node.costSoFar + costToReturn;  if (totalCost < bestCost) { 
+ bestCost = totalCost; 
+ bestPath = node.path; 
+ bestPath.push_back(startCity); 
+ } 
+ } 
+ continue; 
+ } 
+ int u = node.path.back(); 
+ for (int v = 0; v < N; ++v) { 
+ if (find(node.path.begin(), node.path.end(), v) == node.path.end()) {  if (originalMatrix[u][v] == INF) continue; 
+ vector<vector<int>> childMatrix = node.reducedMatrix;  for (int i = 0; i < N; ++i) { 
+ childMatrix[u][i] = INF; 
+ childMatrix[i][v] = INF; 
+ } 
+ childMatrix[v][startCity] = INF; 
+ int reductionCost = reduceMatrix(childMatrix);  int newCostSoFar = node.costSoFar + originalMatrix[u][v];  int childLB = newCostSoFar + reductionCost; 
+ if (childLB < bestCost) { 
+ Node child = { 
+ node.level + 1, 
+ newCostSoFar, 
+ childLB, 
+ node.path, 
+ childMatrix 
+ }; 
+ child.path.push_back(v); 
+ PQ.push(child); 
+ }
+ } 
+ } 
+ } 
+ return {bestCost, bestPath}; 
+} 
+int main() { 
+ int N; 
+ cout << "Enter the number of cities (N): "; 
+ cin >> N; 
+ if (N < 2) { 
+ cout << "TSP requires at least 2 cities." << endl; 
+ return 1; 
+ } 
+ vector<vector<int>> costMatrix(N, vector<int>(N)); 
+ cout << "Enter the cost matrix (" << N << "x" << N << "):" << endl; 
+ cout << "Use '0' for cost from city to itself (diagonal only). For no route, use a large number (e.g., 9999)." << endl;  for (int i = 0; i < N; ++i) { 
+ cout << "Enter costs for City " << i << " (separated by spaces): "; 
+ for (int j = 0; j < N; ++j) { 
+ cin >> costMatrix[i][j]; 
+ if (i == j) costMatrix[i][j] = INF; 
+ } 
+ } 
+ int startCity = 0; 
+ cout << "\nStarting the TSP calculation from City 0." << endl; 
+ auto result = TSP_BranchAndBound(costMatrix, startCity); 
+ int bestCost = result.first; 
+ vector<int> bestPath = result.second; 
+ cout << "\nOptimal TSP Solution (LC Branch and Bound):" << endl; 
+ if (bestPath.empty()) { 
+ cout << "No feasible tour found (best cost = INF)." << endl; 
+ } else { 
+ cout << "Total Cost: " << bestCost << endl; 
+ cout << "Path: ";
+ for (size_t i = 0; i < bestPath.size(); ++i) { 
+ cout << bestPath[i] << (i < bestPath.size() - 1 ? " -> " : ""); 
+ } 
+ cout << endl; 
+ } 
+ return 0; 
+} 
+6. Output 
+Enter the number of cities (N): 4 
+Enter the cost matrix (4x4): 
+Use '0' for cost from city to itself (diagonal only). For no route, use a large number (e.g., 9999). Enter costs for City 0 (separated by spaces): 0 10 8 9 
+Enter costs for City 1 (separated by spaces): 10 0 12 6 
+Enter costs for City 2 (separated by spaces): 8 12 0 11 
+Enter costs for City 3 (separated by spaces): 9 6 11 0 
+Starting the TSP calculation from City 0. 
+Optimal TSP Solution (LC Branch and Bound): 
+Total Cost: 35 
+Path: 0 -> 2 -> 3 -> 1 -> 0 
