@@ -1,0 +1,155 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+#include <ctime>
+#include <iomanip>
+
+using namespace std;
+
+struct SpaceReport {
+    size_t dist_vector_bytes;
+    size_t peak_pq_bytes;
+};
+
+SpaceReport dijkstra(int source, vector<vector<pair<int, int>>>& graph, vector<int>& dist) {
+    int V = graph.size();
+    dist.assign(V, INT_MAX);
+    dist[source] = 0;
+
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+    pq.push({0, source});
+
+    size_t max_pq_elements = 0;
+
+    while (!pq.empty()) {
+        if (pq.size() > max_pq_elements) {
+            max_pq_elements = pq.size();
+        }
+
+        int u = pq.top().second;
+        int d = pq.top().first;
+        pq.pop();
+
+        if (d > dist[u]) continue;
+
+        for (auto& edge : graph[u]) {
+            int v = edge.first;
+            int w = edge.second;
+
+            if (dist[u] != INT_MAX && dist[v] > dist[u] + w) {
+                dist[v] = dist[u] + w;
+                pq.push({dist[v], v});
+            }
+        }
+    }
+
+    SpaceReport report;
+    report.dist_vector_bytes = V * sizeof(int);
+    report.peak_pq_bytes = max_pq_elements * sizeof(pair<int, int>);
+    return report;
+}
+
+int main() {
+    srand(time(nullptr));
+
+    int V, E;
+    cout << "Enter number of intersections (vertices): ";
+    cin >> V;
+    cout << "Enter number of roads (edges): ";
+    cin >> E;
+
+    if (cin.fail() || V <= 0 || E < 0) {
+        cout << "Error: Invalid input." << endl;
+        return 1;
+    }
+
+    vector<vector<pair<int, int>>> graph(V);
+
+    cout << "Enter " << E << " edges (u v w), where w is travel time in minutes:\n";
+    for (int i = 0; i < E; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        if (u >= 0 && u < V && v >= 0 && v < V && w >= 0) {
+            graph[u].push_back({v, w});
+            graph[v].push_back({u, w});
+        } else {
+            cout << "Skipping invalid edge: (" << u << "," << v << ")\n";
+        }
+    }
+
+    int source;
+    cout << "Enter ambulance start location (source node): ";
+    cin >> source;
+
+    int H;
+    cout << "Enter number of hospitals: ";
+    cin >> H;
+    vector<int> hospitals(H);
+    cout << "Enter hospital nodes (" << H << " of them): ";
+    for (int i = 0; i < H; i++) {
+        cin >> hospitals[i];
+    }
+
+    vector<int> dist;
+
+    clock_t start = clock();
+    SpaceReport space_report = dijkstra(source, graph, dist);
+    clock_t end = clock();
+
+    int minTime = INT_MAX, nearestHospital = -1;
+    for (int h : hospitals) {
+        if (h >= 0 && h < V && dist[h] < minTime) {
+            minTime = dist[h];
+            nearestHospital = h;
+        }
+    }
+
+    cout << "\n--- Results ---\n";
+    if (nearestHospital == -1) {
+        cout << "No hospital is reachable from source " << source << ".\n";
+    } else {
+        cout << "Nearest hospital is at node " << nearestHospital
+             << " with a travel time of " << minTime << " minutes.\n";
+    }
+    
+    double time_taken = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+    cout << "\n--- Performance Report ---\n";
+    cout << "Time taken by Dijkstra's algorithm: "
+         << fixed << setprecision(5) << time_taken << " seconds.\n";
+    
+    cout << "\n--- Space Complexity Report ---\n";
+    cout << "Input size: " << V << " vertices, " << E << " edges\n";
+    cout << "Auxiliary space for distance vector: " << space_report.dist_vector_bytes << " bytes\n";
+    cout << "Peak auxiliary space for priority queue: " << space_report.peak_pq_bytes << " bytes\n";
+    cout << "Total auxiliary space used: " << space_report.dist_vector_bytes + space_report.peak_pq_bytes << " bytes\n";
+
+    return 0;
+}
+Output:
+
+Enter number of intersections (vertices): 6
+Enter number of roads (edges): 7
+Enter 7 edges (u v w), where w is travel time in minutes:
+0 1 4
+0 2 2
+1 2 5
+1 3 10
+2 4 3
+3 5 11
+4 5 4
+Enter ambulance start location (source node): 0
+Enter number of hospitals: 2
+Enter hospital nodes (2 of them): 3 5
+
+--- Results ---
+Nearest hospital is at node 5 with a travel time of 9 minutes.
+
+--- Performance Report ---
+Time taken by Dijkstra's algorithm: 0.00001 seconds.
+
+--- Space Complexity Report ---
+Input size: 6 vertices, 7 edges
+Auxiliary space for distance vector: 24 bytes
+Peak auxiliary space for priority queue: 16 bytes
+Total auxiliary space used: 40 bytes
