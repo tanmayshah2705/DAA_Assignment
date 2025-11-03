@@ -1,0 +1,60 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+int maxUtility(int W, vector<int>& weight, vector<int>& value, int N) {
+    vector<vector<int>> dp(N + 1, vector<int>(W + 1, 0));
+    for (int i = 1; i <= N; i++) {
+        for (int w = 1; w <= W; w++) {
+            if (weight[i - 1] <= w)
+                dp[i][w] = max(value[i - 1] + dp[i - 1][w - weight[i - 1]], dp[i - 1][w]);
+            else
+                dp[i][w] = dp[i - 1][w];
+        }
+    }
+    return dp[N][W];
+}
+
+int main() {
+    int N, W;
+    cout << "Enter number of essential items: ";
+    cin >> N;
+    cout << "Enter relief truck capacity (in kg): ";
+    cin >> W;
+
+    vector<int> weight(N), value(N);
+    cout << "\nEnter weight and utility value for each item:\n";
+    for (int i = 0; i < N; i++) {
+        cout << "Item " << i + 1 << " - Weight (kg): ";
+        cin >> weight[i];
+        cout << "Item " << i + 1 << " - Utility value: ";
+        cin >> value[i];
+    }
+
+    int result = maxUtility(W, weight, value, N);
+    cout << "\n---------------------------------------------\n";
+    cout << "Earthquake Relief Optimization Result\n";
+    cout << "---------------------------------------------\n";
+    cout << "Maximum total utility value that can be carried: " << result << "\n";
+    cout << "---------------------------------------------\n";
+
+    return 0;
+}
+
+Output:
+Enter number of essential items: 4
+Enter relief truck capacity (in kg): 10
+
+Enter weight and utility value for each item:
+Item 1 - Weight (kg): 5
+Item 1 - Utility value: 60
+Item 2 - Weight (kg): 3
+Item 2 - Utility value: 50
+Item 3 - Weight (kg): 4
+Item 3 - Utility value: 70
+Item 4 - Weight (kg): 2
+Item 4 - Utility value: 30
+
+---------------------------------------------
+Earthquake Relief Optimization Result
+---------------------------------------------
+Maximum total utility value that can be carried: 150
