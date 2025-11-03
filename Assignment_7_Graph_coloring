@@ -1,0 +1,158 @@
+#include <iostream> 
+#include <string> 
+#include <vector> 
+#include <map> 
+#include <set>
+#include <sstream> 
+#include <algorithm> 
+#include <iomanip> 
+using namespace std; 
+struct Exam { 
+string name; 
+int students; 
+}; 
+struct Room { 
+string name; 
+int capacity; 
+}; 
+vector<string> splitCourses(const string& s) { vector<string> result; 
+stringstream ss(s); 
+string course; 
+while (getline(ss, course, ',')) { 
+size_t first = course.find_first_not_of(' '); if (string::npos == first) continue; 
+size_t last = course.find_last_not_of(' '); 
+result.push_back(course.substr(first, (last - first + 1))); } 
+return result; 
+} 
+int main() { 
+map<string, string> studentEnrollmentsInput;
+vector<Room> rooms; 
+map<string, int> studentCounts; 
+set<string> courseSet; 
+int numCourses, numStudents, numRooms; 
+cout << "Enter the total number of courses: "; cin >> numCourses; 
+cout << "Enter details for each course (Name Students):" << endl; 
+for (int i = 0; i < numCourses; ++i) { 
+string name; int count; 
+cin >> name >> count; 
+studentCounts[name] = count; 
+courseSet.insert(name); 
+} 
+cout << "\nEnter the total number of students: "; cin >> numStudents; 
+cin.ignore(); 
+cout << "Enter details for each student (ID EnrolledCourses):\nExample: S1 C1, C2, C3" << endl; for (int i = 0; i < numStudents; ++i) { 
+string studentID, coursesStr, line; 
+getline(cin, line); 
+stringstream ss(line); 
+ss >> studentID; 
+getline(ss, coursesStr); 
+size_t first = coursesStr.find_first_not_of(' '); 
+if (string::npos != first) coursesStr = coursesStr.substr(first); 
+studentEnrollmentsInput[studentID] = coursesStr; 
+} 
+cout << "\nEnter the total number of rooms: "; cin >> numRooms; 
+cout << "Enter details for each room (Name Capacity):" << endl;
+for (int i = 0; i < numRooms; ++i) { 
+string name; int cap; 
+cin >> name >> cap; 
+rooms.push_back({name, cap}); 
+} 
+cout << "\n--- Input Received ---\nBuilding Conflict Graph..." << endl; map<string, set<string>> adjList; 
+for (const auto& [student, coursesStr] : studentEnrollmentsInput) { vector<string> courses = splitCourses(coursesStr); 
+for (size_t i = 0; i < courses.size(); ++i) { 
+for (size_t j = i + 1; j < courses.size(); ++j) { 
+adjList[courses[i]].insert(courses[j]); 
+adjList[courses[j]].insert(courses[i]); 
+} 
+} 
+} 
+vector<string> allCourses(courseSet.begin(), courseSet.end()); 
+map<string, int> courseColor; 
+for (const string& course : allCourses) courseColor[course] = -1; 
+cout << "Applying Graph Coloring..." << endl; 
+vector<pair<string, int>> courseDegrees; 
+for (const string& course : allCourses) { 
+courseDegrees.push_back({course, adjList[course].size()}); 
+} 
+sort(courseDegrees.begin(), courseDegrees.end(), [](const auto& a, const auto& b) { return a.second > b.second;
+}); 
+vector<string> sortedCourses; 
+for (const auto& p : courseDegrees) sortedCourses.push_back(p.first); int numTimeSlots = 0; 
+for (const string& u : sortedCourses) { 
+set<int> usedColors; 
+for (const string& v : adjList[u]) { 
+if (courseColor[v] != -1) usedColors.insert(courseColor[v]); 
+} 
+int c = 0; 
+while (usedColors.count(c)) c++; 
+courseColor[u] = c; 
+if (c + 1 > numTimeSlots) numTimeSlots = c + 1; 
+} 
+cout << "Allocating Rooms..." << endl; 
+map<string, string> assignedRoom; 
+map<int, set<string>> occupiedRooms; 
+sort(rooms.begin(), rooms.end(), [](const Room& a, const Room& b) { return a.capacity < b.capacity; 
+}); 
+for (int t = 0; t < numTimeSlots; ++t) { 
+vector<Exam> examsInSlot; 
+for (const string& course : allCourses) { 
+if (courseColor[course] == t) { 
+examsInSlot.push_back({course, studentCounts.count(course) ? studentCounts[course] : 0}); } 
+}
+compareExams) 
+sort(examsInSlot.begin(), examsInSlot.end(), [](const Exam& a, const Exam& b) { return a.students > b.students; 
+}); 
+for (const Exam& e : examsInSlot) { 
+bool roomAssigned = false; 
+for (const Room& r : rooms) { 
+if (r.capacity >= e.students && occupiedRooms[t].find(r.name) == occupiedRooms[t].end()) { assignedRoom[e.name] = r.name; 
+occupiedRooms[t].insert(r.name); 
+roomAssigned = true; 
+break; 
+} 
+} 
+if (!roomAssigned) assignedRoom[e.name] = "UNASSIGNED"; 
+} 
+} 
+cout << "\nFinal Timetable:\n" << endl; 
+cout << left << setw(10) << "Course" << setw(12) << "Time Slot" << setw(10) << "Room" << endl; cout << string(32, '-') << endl; 
+sort(allCourses.begin(), allCourses.end()); 
+for (const string& c : allCourses) { 
+cout << left << setw(10) << c 
+<< setw(12) << ("Slot " + to_string(courseColor[c] + 1)) 
+<< setw(10) << assignedRoom[c] << endl; 
+} 
+return 0;
+} 
+Input: 
+Enter the total number of courses: 5 
+Enter details for each course (Name Students): C1 100 
+C2 80 
+C3 90 
+C4 50 
+C5 60 
+Enter the total number of students: 5 
+Enter details for each student (ID EnrolledCourses): Example: S1 C1, C2, C3 
+S1 C1, C2, C3 
+S2 C1, C3, C5 
+S3 C3, C4 
+S4 C2, C3, C4 
+S5 C3, C5 
+Enter the total number of rooms: 4 
+Enter details for each room (Name Capacity): R1 100 
+R2 80 
+R3 50 
+R4 70 
+Output: 
+--- Input Received --- 
+Building Conflict Graph... 
+Applying Graph Coloring...
+Allocating Rooms... 
+Final Timetable: 
+Course Time Slot Room  
+-------------------------------- 
+C1 Slot 2 R1  
+C2 Slot 3 R2  
+C3 Slot 1 R1  
+C4 Slot 2 R3  
+C5 Slot 3 R4  
