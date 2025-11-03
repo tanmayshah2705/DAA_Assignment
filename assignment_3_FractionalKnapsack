@@ -1,0 +1,146 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+
+using namespace std;
+using namespace chrono;
+
+struct Item {
+    string name;
+    double weight;
+    double value;
+    bool divisible;
+    int priority;
+
+    Item(string n, double w, double v, bool d, int p)
+        : name(n), weight(w), value(v), divisible(d), priority(p) {}
+
+    double valuePerWeight() const {
+        return value / weight;
+    }
+};
+
+bool compare(const Item& a, const Item& b) {
+    if (a.priority == b.priority)
+        return a.valuePerWeight() > b.valuePerWeight();
+    return a.priority < b.priority;
+}
+
+double fractionalKnapsack(vector<Item>& items, double capacity, double& totalWeight) {
+    sort(items.begin(), items.end(), compare);
+    double totalValue = 0;
+    totalWeight = 0;
+
+    cout << "\nItems selected for transport:\n";
+    for (const auto& item : items) {
+        if (capacity <= 0) break;
+
+        if (item.divisible) {
+            double take = min(item.weight, capacity);
+            double itemValue = take * item.valuePerWeight();
+            totalValue += itemValue;
+            totalWeight += take;
+            capacity -= take;
+
+            cout << item.name << " (Divisible): " << take << " kg, Utility = "
+                 << itemValue << "\n";
+        } else if (item.weight <= capacity) {
+            totalValue += item.value;
+            totalWeight += item.weight;
+            capacity -= item.weight;
+
+            cout << item.name << " (Indivisible): " << item.weight << " kg, Utility = "
+                 << item.value << "\n";
+        }
+    }
+
+    return totalValue;
+}
+
+int main() {
+    auto start = high_resolution_clock::now();
+
+    int n;
+    cout << "Enter number of relief items: ";
+    cin >> n;
+
+    vector<Item> items;
+    cin.ignore(); // Clear newline before getline
+
+    for (int i = 0; i < n; ++i) {
+        string name;
+        double weight, value;
+        int divisibleInt, priority;
+
+        cout << "\nItem #" << (i + 1) << " Name: ";
+        getline(cin, name);
+
+        cout << "Weight (kg): ";
+        cin >> weight;
+
+        cout << "Utility Value: ";
+        cin >> value;
+
+        cout << "Divisible? (1 = Yes, 0 = No): ";
+        cin >> divisibleInt;
+
+        cout << "Priority (1=High, 2=Medium, 3=Low): ";
+        cin >> priority;
+
+        cin.ignore(); // Prepare for next getline
+        items.emplace_back(name, weight, value, divisibleInt == 1, priority);
+    }
+
+    double capacity;
+    cout << "\nEnter maximum weight capacity of the boat (kg): ";
+    cin >> capacity;
+
+    double totalWeight;
+    double maxValue = fractionalKnapsack(items, capacity, totalWeight);
+
+    cout << "\n===== Final Report =====\n";
+    cout << "Total weight carried: " << totalWeight << " kg\n";
+    cout << "Total utility value carried: " << maxValue << "\n";
+
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end - start);
+    cout << "Program execution time: " << duration.count() << " ms\n";
+
+    return 0;
+}
+
+
+
+Output:
+
+Enter number of relief items: 4
+Item #1 Name: Rice Bags
+Weight (kg): 10
+Utility Value: 60
+Divisible? (1 = Yes, 0 = No): 1
+Priority (1=High,2=Medium,3=Low): 2
+Item #2 Name: Medicine Box
+Weight (kg): 5
+Utility Value: 100
+Divisible? (1 = Yes, 0 = No): 0
+Priority (1=High,2=Medium,3=Low): 1
+Item #3 Name: Water Bottles
+Weight (kg): 8
+Utility Value: 70
+Divisible? (1 = Yes, 0 = No): 1
+Priority (1=High,2=Medium,3=Low): 2
+Item #4 Name: Blankets
+Weight (kg): 12
+Utility Value: 90
+Divisible? (1 = Yes, 0 = No): 0
+Priority (1=High,2=Medium,3=Low): 3
+
+1
+0
+
+Enter maximum weight capacity of the boat (kg): 20
+Items selected for transport:
+Medicine Box (Indivisible): 5 kg, Utility = 100
+Rice Bags (Divisible): 10 kg, Utility = 60
+Water Bottles (Divisible): 5 kg, Utility = 43.75
